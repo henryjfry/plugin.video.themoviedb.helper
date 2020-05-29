@@ -8,14 +8,9 @@ import xbmcaddon
 import unicodedata
 import datetime
 import hashlib
-import json
 from copy import copy
 from contextlib import contextmanager
 from resources.lib.constants import TYPE_CONVERSION, VALID_FILECHARS
-try:
-    from urllib.parse import urlencode, unquote_plus  # Py3
-except ImportError:
-    from urllib import urlencode, unquote_plus
 _addonlogname = '[plugin.video.themoviedb.helper]\n'
 _addon = xbmcaddon.Addon()
 _debuglogging = _addon.getSettingBool('debug_logging')
@@ -39,15 +34,14 @@ def validify_filename(filename):
         pass
     filename = str(unicodedata.normalize('NFD', filename).encode('ascii', 'ignore').decode("utf-8"))
     filename = ''.join(c for c in filename if c in VALID_FILECHARS)
-    filename = filename[:-1] if filename.endswith('.') else filename
     return filename
 
 
 def makepath(path):
-    if xbmcvfs.exists(path):
+        if xbmcvfs.exists(path):
+            return xbmc.translatePath(path)
+        xbmcvfs.mkdirs(path)
         return xbmc.translatePath(path)
-    xbmcvfs.mkdirs(path)
-    return xbmc.translatePath(path)
 
 
 def md5hash(value):
@@ -60,26 +54,6 @@ def md5hash(value):
 
 def type_convert(original, converted):
     return TYPE_CONVERSION.get(original, {}).get(converted, '')
-
-
-def parse_paramstring(paramstring):
-    """ helper to assist with difference in urllib modules in PY2/3 """
-    params = {}
-    paramstring = paramstring.replace('&amp;', '&')  # Just in case xml string
-    for param in paramstring.split('&'):
-        if '=' not in param:
-            continue
-        k, v = param.split('=')
-        params[try_decode_string(unquote_plus(k))] = try_decode_string(unquote_plus(v))
-    return params
-
-
-def urlencode_params(kwparams):
-    """ helper to assist with difference in urllib modules in PY2/3 """
-    params = {}
-    for k, v in kwparams.items():
-        params[try_encode_string(k)] = try_encode_string(v)
-    return urlencode(params)
 
 
 def try_parse_int(string):
@@ -98,12 +72,12 @@ def try_parse_float(string):
         return 0
 
 
-def try_decode_string(string, encoding='utf-8', errors=None):
+def try_decode_string(string, encoding='utf-8'):
     """helper to decode strings for PY 2 """
     if sys.version_info.major == 3:
         return string
     try:
-        return string.decode(encoding, errors) if errors else string.decode(encoding)
+        return string.decode(encoding)
     except Exception:
         return string
 
@@ -185,15 +159,15 @@ def rate_limiter(addon_name='plugin.video.themoviedb.helper', wait_time=None, ap
 
 
 def get_property(name, setproperty=None, clearproperty=False, prefix=None, window_id=None):
-    window = xbmcgui.Window(window_id) if window_id else xbmcgui.Window(xbmcgui.getCurrentWindowId())
-    name = '{0}.{1}'.format(prefix, name) if prefix else name
-    if clearproperty:
-        window.clearProperty(name)
-        return
-    elif setproperty:
-        window.setProperty(name, setproperty)
-        return setproperty
-    return window.getProperty(name)
+        window = xbmcgui.Window(window_id) if window_id else xbmcgui.Window(xbmcgui.getCurrentWindowId())
+        name = '{0}.{1}'.format(prefix, name) if prefix else name
+        if clearproperty:
+            window.clearProperty(name)
+            return
+        elif setproperty:
+            window.setProperty(name, setproperty)
+            return setproperty
+        return window.getProperty(name)
 
 
 def dialog_select_item(items=None, details=False, usedetails=True):
@@ -276,8 +250,10 @@ def date_to_format(time_str, str_fmt="%A", time_fmt="%Y-%m-%d", time_lim=10, utc
 
 
 def date_in_range(date_str, days=1, start_date=0, date_fmt="%Y-%m-%dT%H:%M:%S", date_lim=19, utc_convert=False):
+    
     date_a = datetime.date.today() + datetime.timedelta(days=start_date)
     date_z = date_a + datetime.timedelta(days=days)
+
     mydate = convert_timestamp(date_str, date_fmt, date_lim, utc_convert=utc_convert).date()
     if not mydate or not date_a or not date_z:
         return
@@ -300,23 +276,6 @@ def kodi_log(value, level=0):
             xbmc.log(logvalue, level=xbmc.LOGDEBUG)
     except Exception as exc:
         xbmc.log(u'Logging Error: {}'.format(exc), level=xbmc.LOGNOTICE)
-
-
-def get_jsonrpc(method=None, params=None):
-    if not method or not params:
-        return {}
-    query = {
-        "jsonrpc": "2.0",
-        "params": params,
-        "method": method,
-        "id": 1}
-    try:
-        jrpc = xbmc.executeJSONRPC(json.dumps(query))
-        response = json.loads(try_decode_string(jrpc, errors='ignore'))
-    except Exception as exc:
-        kodi_log(u'TMDbHelper - JSONRPC Error:\n{}'.format(exc), 1)
-        response = {}
-    return response
 
 
 def dictify(r, root=True):
