@@ -172,6 +172,7 @@ class TraktAPI(RequestAPI):
     def get_itemlist_sorted(self, *args, **kwargs):
         response = self.get_response(*args, extended='full')
         items = response.json()
+<<<<<<< Updated upstream
 =======
         response.headers['X-Sort-How'] = kwargs.get('sortdirection') or response.headers.get('X-Sort-How')
         response.headers['X-Sort-By'] = kwargs.get('sortmethod') or response.headers.get('X-Sort-By')
