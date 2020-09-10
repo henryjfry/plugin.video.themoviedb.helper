@@ -208,7 +208,12 @@ class TraktAPI(RequestAPI):
         page = kwargs.pop('page', 1)
         limit = kwargs.pop('limit', 10)
         cache_refresh = True if page == 1 else False
-        kwparams = {'cache_name': self.cache_name + '.trakt.sortedlist.v3', 'cache_days': 0.125, 'cache_refresh': cache_refresh}
+        kwparams = {
+            'cache_name': self.cache_name + '.trakt.sortedlist.v4',
+            'cache_days': 0.125,
+            'cache_refresh': cache_refresh,
+            'sortmethod': kwargs.pop('sortmethod', None),
+            'sortdirection': kwargs.pop('sortdirection', None)}
         items = self.use_cache(self.get_itemlist_sorted, *args, **kwparams)
         index_z = page * limit
         index_a = index_z - limit
@@ -229,7 +234,10 @@ class TraktAPI(RequestAPI):
         limit = kwargs.get('limit', 0)
 
         if usr_list:  # Check if userlist and apply special sorting
-            kwparams = {'page': this_page, 'limit': limit}
+            kwparams = {
+                'page': this_page, 'limit': limit,
+                'sortmethod': kwargs.pop('sortmethod', None),
+                'sortdirection': kwargs.pop('sortdirection', None)}
             response = self.get_itemlist_sortedcached(*args, **kwparams)
             itemlist = response.get('items')
             if not itemlist:
