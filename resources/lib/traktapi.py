@@ -177,7 +177,7 @@ class TraktAPI(RequestAPI):
         try: 
 		    items = sorted(items, key=lambda i: i['listed_at'], reverse=True)
 		    return items
-	    except: items = items
+	except: items = items
 #	    xbmc.log(str(items)+'===>TRAKT_LIST', level=xbmc.LOGNOTICE)
         reverse = True if response.headers.get('X-Sort-How') == 'desc' else False
         if response.headers.get('X-Sort-By') == 'rank':
